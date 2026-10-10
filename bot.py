@@ -21,7 +21,7 @@ import re
 # Load environment variables
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN', '')
 BOT_NAME = os.getenv('BOT_NAME', 'SHADOW-v1')
-PREFIX = os.getenv('PREFIX', '!')
+PREFIX = os.getenv('PREFIX', '.')
 YOUR_SERVER_IP = os.getenv('YOUR_SERVER_IP', '127.0.0.1')
 
 # ---- Public IP detection (used for SSH login info shown to users) ----
