@@ -36,7 +36,7 @@ ascii_banner() {
     rainbow_line '| _ \ (_) || |   | |__ >  < (__  | _|| |) | |  | |  | | (_) | .` |'
     rainbow_line '|___/\___/ |_|   |____/_/\_\___| |___|___/___| |_| |___\___/|_|\_|'
     echo ""
-    rainbow_line '                    ~ Made by EvilSaad ~'
+    rainbow_line '                    ~ Made by ShadowBoss ~'
     echo ""
 }
 
@@ -46,7 +46,7 @@ banner() {
     echo -e "${WHT}  ─────────────────────────────────────────────────────────────${NC}"
     echo -e "  ${CYN}Fully Automated LXC/LXD VPS Discord Bot Installer${NC}"
     echo -e "  ${CYN}Ubuntu & Debian supported | Fast setup${NC}"
-    echo -e "  ${MAG}Made by EvilSaad${NC}  |  ${BLU}github.com/evilsaad0-hash/vps-deploy-bot-v1${NC}"
+    echo -e "  ${MAG}Made by ShadowBoss${NC}  |  ${BLU}github.com/shadowboss092-design/vps-deploy-bot-v1${NC}"
     echo -e "${WHT}  ─────────────────────────────────────────────────────────────${NC}\n"
 }
 
