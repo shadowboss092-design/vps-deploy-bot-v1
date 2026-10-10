@@ -1,4 +1,4 @@
-# Evil Vps V1 Bot — LXC Edition
+# SHADOW Vps V1 Bot — LXC Edition
 
 Made by **EVILSAAD**
 Repo: https://github.com/evilsaad0-hash/vps-deploy-bot-v1.git
