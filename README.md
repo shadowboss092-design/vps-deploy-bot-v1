@@ -1,80 +1,58 @@
-# SHADOW Vps V1 Bot — LXC Edition
+# SHADOW VPS Deploy Bot V2
 
-Made by **SHADOWBOSS**
-Repo: https://github.com/shadowboss092-design/vps-deploy-bot-v1.git
+Invite-reward VPS provisioning bot built with discord.py, SQLite and LXD.
 
-Fully automated Discord bot for managing LXC/LXD-based VPS containers — creation, resizing, suspension, port forwarding, multi-node support, and admin controls, all from Discord.
+## Reward tiers
+
+| Invites | RAM | vCore | NVMe |
+|---:|---:|---:|---:|
+| 2 | 1 GB | 1 | 5 GB |
+| 4 | 2 GB | 1 | 5 GB |
+| 6 | 4 GB | 1 | 10 GB |
+| 8 | 6 GB | 1 | 15 GB |
+| 10 | 8 GB | 2 | 20 GB |
+| 14 | 12 GB | 3 | 25 GB |
+| 18 | 16 GB | 3 | 30 GB |
+| 22 | 20 GB | 4 | 35 GB |
+| 26 | 24 GB | 4 | 40 GB |
+| 32 | 32 GB | 6 | 45 GB |
+
+## Commands
+- .claim — reward selector.
+- .invites / .invs — active referrals, available credits and used credits.
+- .myvps — your VPS instances.
+- .ping and .help.
+- Admins: .syncinvites and .vpslist.
+
+## Invite tracking
+Enable Server Members Intent and Message Content Intent in the Discord Developer Portal. Give the bot Manage Server permission to read invite usage. Only uniquely attributed human members count. Self-invites and bots do not count. A referred member leaving makes an unused credit unavailable. Consumed credits are not refunded. Existing members are not credited retroactively. Vanity/unknown invite joins cannot be attributed.
+
+## Claim safety
+Claims are serialized. The bot checks invite credits and host headroom, provisions the LXD container, then consumes credits only after successful deployment. Provisioning failure does not deduct credits. Capacity checks use the host’s currently available RAM, free disk and CPU count; no extra reserve settings are configured. Each VPS receives a generated root password and an SSH proxy port.
 
 ## Requirements
+- Ubuntu/Debian with root access and outbound HTTPS.
+- LXD initialized with a storage pool.
+- Public IPv4 and provider firewall access.
+- Discord bot token and numeric admin Discord ID(s).
 
-- A fresh Ubuntu or Debian server (root access)
-- A Discord Bot Token ([Discord Developer Portal](https://discord.com/developers/applications))
-- Your Discord User ID (main admin)
-- `git` installed (`sudo apt install git -y` if missing)
+## Install on a clean host
 
-## Installation (from GitHub)
-
-Clone the repo and run the installer as root:
-
-```bash
-git clone https://github.com/shadowboss092-design/vps-deploy-bot-v1.git
+\`\`\`bash
+git clone -b v2-rebuild https://github.com/shadowboss092-design/vps-deploy-bot-v1.git
 cd vps-deploy-bot-v1
 chmod +x install.sh
-sudo ./install.sh
-```
+./install.sh
+\`\`\`
 
-Then follow the prompts:
-1. Choose your OS (Ubuntu / Debian) when prompted.
-2. Enter your **Discord Bot Token** and **Main Admin Discord ID** when asked.
+Installer asks for bot token, admin IDs, public IPv4 and LXD storage pool. Secrets are stored in /etc/evil-vps-bot/bot.env with mode 0600.
 
-> If you're not using GitHub, just place `bot.py` and `install.sh` in the same folder on your server and run `sudo ./install.sh` directly.
+## Service
 
-The script will:
-- Install and initialize LXD/LXC
-- Install Python 3, pip, and required packages (`discord.py`, `requests`)
-- Copy `bot.py` to `/root/bot.py`
-- Create and enable a `bot.service` systemd unit so the bot runs 24/7 and restarts on failure or reboot
+\`\`\`bash
+systemctl status bot
+journalctl -u bot -f
+systemctl restart bot
+\`\`\`
 
-## Managing the Bot
-
-| Action | Command |
-|---|---|
-| Check status | `systemctl status bot` |
-| View live logs | `journalctl -u bot -f` |
-| Restart | `sudo systemctl restart bot` |
-| Stop | `sudo systemctl stop bot` |
-| Disable autostart | `sudo systemctl disable bot` |
-
-## Configuration
-
-Environment variables are set directly in `/etc/systemd/system/bot.service`. After editing that file, apply changes with:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart bot
-```
-
-Key variables:
-
-| Variable | Description | Default |
-|---|---|---|
-| `DISCORD_TOKEN` | Your bot's token | — (required) |
-| `MAIN_ADMIN_ID` | Your Discord user ID. Supports **multiple IDs**, comma-separated (e.g. `id1,id2,id3`) | — (required) |
-| `BOT_NAME` | Display name used in embeds | `Svm-v9` |
-| `PREFIX` | Command prefix | `!` |
-| `VPS_USER_ROLE_ID` | Role ID granted to VPS owners | — |
-| `DEFAULT_STORAGE_POOL` | LXD storage pool name | `default` |
-
-## Admin Management
-
-- `!admin-add @user` / `!admin-remove @user` — manage regular admins by mention (main admin only). Requires the user to be in the server.
-- `!add-admin <user_id>` / `!rm-admin <user_id>` — manage **main admins** by raw Discord ID (main admin only). Works even if the user isn't in the server yet. At least one main admin is always kept.
-- `!admin-list` — shows all main admins and regular admins.
-
-Multiple main admins are stored in the database (seeded from `MAIN_ADMIN_ID`), so changes made with `!add-admin`/`!rm-admin` persist across restarts.
-
-## Notes
-
-- The bot runs as **root** because it directly manages LXC containers via `lxc`/`lxd` — keep the bot token and server access secured.
-- `vps.db` (SQLite) is created automatically in `/root` on first run and stores nodes, VPS records, admins, and settings.
-- Run `!help` in Discord after the bot is online to see the full command list.
+The bot runs as root to manage LXD. Restrict host access and never publish the token. Do not expose the LXD API publicly. Open TCP 22000-49999 in the provider firewall for SSH proxy connections. Installer does not delete existing containers or storage pools.
