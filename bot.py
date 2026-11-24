@@ -13,9 +13,6 @@ DB_PATH=os.getenv("DATABASE_PATH","/opt/evil-vps-bot/vps-v2.db")
 POOL=os.getenv("DEFAULT_STORAGE_POOL","default")
 IMAGE=os.getenv("DEFAULT_OS_IMAGE","ubuntu:22.04")
 PUBLIC_IP=os.getenv("PUBLIC_IP","YOUR_SERVER_PUBLIC_IP")
-RAM_RESERVE=int(os.getenv("RESERVE_RAM_GB","3"))
-DISK_RESERVE=int(os.getenv("RESERVE_DISK_GB","15"))
-CPU_RESERVE=int(os.getenv("RESERVE_CPU","2"))
 TIMEOUT=int(os.getenv("CLAIM_TIMEOUT","900"))
 
 TIERS={
@@ -79,9 +76,9 @@ async def cmd(*args,timeout=180):
  return out.decode(errors="replace").strip()
 
 def capacity(t):
- ram=psutil.virtual_memory().available/1024**3-RAM_RESERVE
- disk=shutil.disk_usage("/").free/1024**3-DISK_RESERVE
- cpu=max(1,(os.cpu_count() or 2)-CPU_RESERVE)
+ ram=psutil.virtual_memory().available/1024**3
+ disk=shutil.disk_usage("/").free/1024**3
+ cpu=max(1,os.cpu_count() or 2)
  with connect_db() as c: used=c.execute("SELECT COALESCE(SUM(cpu),0) FROM instances WHERE status='running'").fetchone()[0]
  if t["ram"]>max(0,ram): raise RuntimeError(f"Safe free RAM is only {max(0,ram):.1f} GB.")
  if t["disk"]>max(0,disk): raise RuntimeError(f"Safe free disk is only {max(0,disk):.1f} GB.")

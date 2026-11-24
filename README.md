@@ -28,7 +28,7 @@ Invite-reward VPS provisioning bot built with discord.py, SQLite and LXD.
 Enable Server Members Intent and Message Content Intent in the Discord Developer Portal. Give the bot Manage Server permission to read invite usage. Only uniquely attributed human members count. Self-invites and bots do not count. A referred member leaving makes an unused credit unavailable. Consumed credits are not refunded. Existing members are not credited retroactively. Vanity/unknown invite joins cannot be attributed.
 
 ## Claim safety
-Claims are serialized. The bot checks invite credits and host headroom, provisions the LXD container, then consumes credits only after successful deployment. Provisioning failure does not deduct credits. Capacity checks reserve RAM, disk and CPU. Each VPS receives a generated root password and an SSH proxy port.
+Claims are serialized. The bot checks invite credits and host headroom, provisions the LXD container, then consumes credits only after successful deployment. Provisioning failure does not deduct credits. Capacity checks use the host’s currently available RAM, free disk and CPU count; no extra reserve settings are configured. Each VPS receives a generated root password and an SSH proxy port.
 
 ## Requirements
 - Ubuntu/Debian with root access and outbound HTTPS.
