@@ -108,7 +108,7 @@ async def provision(uid,t):
   await cmd("lxc","config","device","set",name,"root","size",f"{t['disk']}GB",timeout=30)
   script=("export DEBIAN_FRONTEND=noninteractive; apt-get update -y && apt-get install -y openssh-server; "
    f"echo 'root:{pw}' | chpasswd; mkdir -p /run/sshd; "
-   "printf '\\nPermitRootLogin yes\\nPasswordAuthentication yes\\n' >> /etc/ssh/sshd_config; systemctl enable --now ssh")
+   "printf '\nPermitRootLogin yes\nPasswordAuthentication yes\n' >> /etc/ssh/sshd_config; systemctl enable --now ssh")
   await cmd("lxc","exec",name,"--","bash","-lc",script,timeout=TIMEOUT)
   out=await cmd("lxc","list",name,"-c","4","--format","csv",timeout=30)
   m=re.search(r"(?:10|172|192)\.\d{1,3}\.\d{1,3}\.\d{1,3}",out)
@@ -168,7 +168,7 @@ async def on_member_remove(m):
 
 def reward_embed():
  e=discord.Embed(title="🎁 Invite Rewards",description="Invite members and redeem credits for a VPS. Choose a plan below.",color=discord.Color.blurple())
- e.description+="\\n\\n"+"\\n".join(REWARDS)
+ e.description+="\n\n"+"\n".join(REWARDS)
  e.set_footer(text="Unique human invites only. Members who leave no longer count.")
  return e
 
@@ -199,8 +199,8 @@ class RewardSelect(discord.ui.Select):
      c.execute("INSERT INTO instances(instance,guild_id,user_id,ram,cpu,disk,port,created_at,status) VALUES(?,?,?,?,?,?,?,?, 'running')",
       (name,str(self.gid),str(self.uid),t["ram"],t["cpu"],t["disk"],port,now))
     e=discord.Embed(title="✅ VPS Deployed",description=f"Your {t['name']} VPS is ready.",color=discord.Color.green())
-    e.add_field(name="Resources",value=f"{t['ram']} GB RAM\\n{t['cpu']} vCore\\n{t['disk']} GB NVMe")
-    e.add_field(name="SSH login",value=f"Host: {PUBLIC_IP}\\nPort: {port}\\nUser: root\\nPassword: ||{pw}||",inline=False)
+    e.add_field(name="Resources",value=f"{t['ram']} GB RAM\n{t['cpu']} vCore\n{t['disk']} GB NVMe")
+    e.add_field(name="SSH login",value=f"Host: {PUBLIC_IP}\nPort: {port}\nUser: root\nPassword: ||{pw}||",inline=False)
     e.add_field(name="Instance",value=name,inline=False)
     e.set_footer(text=f"{t['invites']} credits consumed after successful deployment.")
     await i.followup.send(embed=e,ephemeral=True)
@@ -208,7 +208,7 @@ class RewardSelect(discord.ui.Select):
     except discord.Forbidden: pass
    except Exception as ex:
     log.exception("Claim failed for %s",self.uid)
-    await i.followup.send(f"VPS deployment failed. No invite credits were deducted.\\n{str(ex)[:1200]}",ephemeral=True)
+    await i.followup.send(f"VPS deployment failed. No invite credits were deducted.\n{str(ex)[:1200]}",ephemeral=True)
 
 class ClaimView(discord.ui.View):
  def __init__(self,uid,gid):
@@ -237,7 +237,7 @@ async def myvps(ctx):
   rows=c.execute("SELECT instance,ram,cpu,disk,port,status FROM instances WHERE guild_id=? AND user_id=? ORDER BY created_at DESC",(str(ctx.guild.id),str(ctx.author.id))).fetchall()
  if not rows: await ctx.send("No VPS yet. Use .claim to redeem invite rewards."); return
  e=discord.Embed(title="🖥️ Your VPS Instances",color=discord.Color.blurple())
- for r in rows[:10]: e.add_field(name=r["instance"],value=f"{r['ram']} GB RAM • {r['cpu']} vCore • {r['disk']} GB NVMe\\nSSH port: {r['port']} • {r['status']}",inline=False)
+ for r in rows[:10]: e.add_field(name=r["instance"],value=f"{r['ram']} GB RAM • {r['cpu']} vCore • {r['disk']} GB NVMe\nSSH port: {r['port']} • {r['status']}",inline=False)
  await ctx.send(embed=e)
 
 @bot.command(name="ping")
@@ -246,8 +246,8 @@ async def ping(ctx): await ctx.send(f"Pong! {round(bot.latency*1000)}ms")
 @bot.command(name="help")
 async def help_cmd(ctx):
  e=discord.Embed(title=f"{NAME} Commands",color=discord.Color.blurple())
- e.add_field(name="Members",value=".claim — VPS reward menu\\n.invites — Invite balance\\n.myvps — Your VPS list\\n.ping — Latency",inline=False)
- if is_admin(ctx.author.id): e.add_field(name="Admins",value=".syncinvites — Refresh invite cache\\n.vpslist — List recent VPS",inline=False)
+ e.add_field(name="Members",value=".claim — VPS reward menu\n.invites — Invite balance\n.myvps — Your VPS list\n.ping — Latency",inline=False)
+ if is_admin(ctx.author.id): e.add_field(name="Admins",value=".syncinvites — Refresh invite cache\n.vpslist — List recent VPS",inline=False)
  await ctx.send(embed=e)
 
 @bot.command(name="syncinvites")
@@ -262,7 +262,7 @@ async def vpslist(ctx):
  if not is_admin(ctx.author.id): await ctx.send("Not authorized."); return
  with connect_db() as c: rows=c.execute("SELECT instance,user_id,ram,cpu,disk,port FROM instances ORDER BY created_at DESC LIMIT 25").fetchall()
  if not rows: await ctx.send("No VPS claimed yet."); return
- await ctx.send("\\n".join(f"{r['instance']} — <@{r['user_id']}> — {r['ram']}GB/{r['cpu']}vC/{r['disk']}GB — port {r['port']}" for r in rows))
+ await ctx.send("\n".join(f"{r['instance']} — <@{r['user_id']}> — {r['ram']}GB/{r['cpu']}vC/{r['disk']}GB — port {r['port']}" for r in rows))
 
 @bot.event
 async def on_command_error(ctx,error):
