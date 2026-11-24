@@ -1,96 +1,55 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
-# Evil VPS V1 bot installer (safe to rerun; does not delete existing containers)
-if [[ $EUID -ne 0 ]]; then
-  echo "Run as root: bash install.sh"
-  exit 1
-fi
-
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-BOT_SOURCE="$SCRIPT_DIR/bot.py"
-[[ -f "$BOT_SOURCE" ]] || { echo "ERROR: bot.py must be in the same folder as install.sh"; exit 1; }
-
-echo "=== Evil VPS V1 Bot Installer ==="
+[[ $EUID -eq 0 ]] || { echo "Run as root: bash install.sh"; exit 1; }
+APP="/opt/evil-vps-bot"; ENV_DIR="/etc/evil-vps-bot"
+HERE="$(cd -- "$(dirname -- "$0")" && pwd)"
 . /etc/os-release
-case "${ID:-}" in
-  ubuntu|debian) ;;
-  *) echo "Supported OS: Ubuntu or Debian"; exit 1 ;;
-esac
-
+case "$ID" in ubuntu|debian) ;; *) echo "Ubuntu/Debian required."; exit 1 ;; esac
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y python3 python3-venv python3-pip ca-certificates curl snapd
-
-# Install LXD only if the LXD CLI is not already available.
-if ! command -v lxc >/dev/null 2>&1; then
-  echo "Installing LXD via snap..."
-  snap install lxd
-fi
-
-# Wait briefly for snap-installed LXD CLI to become available.
-for _ in $(seq 1 20); do
-  command -v lxc >/dev/null 2>&1 && break
-  sleep 2
-done
-command -v lxc >/dev/null 2>&1 || { echo "ERROR: lxc command not found after installation"; exit 1; }
-
-# Initialize only if LXD is not already responding; never reset/reconfigure an existing instance.
-if ! lxc info >/dev/null 2>&1; then
-  echo "LXD is not initialized/responding. Running 'lxd init --auto'..."
-  if command -v lxd >/dev/null 2>&1; then
-    lxd init --auto
-  else
-    echo "ERROR: lxd command not found. Check the snap installation."
-    exit 1
-  fi
-else
-  echo "Existing LXD detected; keeping current configuration."
-fi
-
-if ! lxc storage list --format csv 2>/dev/null | grep -q .; then
-  echo "ERROR: LXD has no storage pool. Run 'lxd init' and create a storage pool, then rerun installer."
-  exit 1
-fi
-
-# Keep the existing configured pool name when possible; bot detects it automatically.
-install -d -m 0755 /opt/evil-vps-bot
-install -m 0644 "$BOT_SOURCE" /opt/evil-vps-bot/bot.py
-python3 -m venv /opt/evil-vps-bot/venv
-/opt/evil-vps-bot/venv/bin/python -m pip install --upgrade pip
-/opt/evil-vps-bot/venv/bin/python -m pip install --upgrade discord.py requests
-
-read -r -s -p "Discord bot token: " DISCORD_TOKEN
-echo
-read -r -p "Main admin Discord ID: " MAIN_ADMIN_ID
-if [[ -z "$DISCORD_TOKEN" || -z "$MAIN_ADMIN_ID" ]]; then
-  echo "ERROR: token and admin ID cannot be empty"
-  exit 1
-fi
-if ! [[ "$MAIN_ADMIN_ID" =~ ^[0-9]+(,[0-9]+)*$ ]]; then
-  echo "ERROR: Admin ID must be numeric (multiple IDs may be comma-separated)"
-  exit 1
-fi
-
-# Store credentials in a root-readable environment file rather than in the unit.
-install -d -m 0750 /etc/evil-vps-bot
+apt-get install -y python3 python3-venv python3-pip snapd ca-certificates
+if ! command -v lxc >/dev/null 2>&1; then snap install lxd; fi
+for _ in $(seq 1 30); do command -v lxc >/dev/null 2>&1 && break; sleep 2; done
+command -v lxc >/dev/null 2>&1 || { echo "LXD CLI unavailable."; exit 1; }
+if ! lxc info >/dev/null 2>&1; then lxd init --auto; fi
+lxc storage list --format csv | grep -q . || { echo "No LXD storage pool. Configure LXD and rerun."; exit 1; }
+install -d -m 0755 "$APP"
+install -m 0644 "$HERE/bot.py" "$APP/bot.py"
+python3 -m venv "$APP/venv"
+"$APP/venv/bin/pip" install --upgrade pip
+"$APP/venv/bin/pip" install -r "$HERE/requirements.txt"
+echo "=== SHADOW VPS V2 setup ==="
+read -r -s -p "Discord bot token: " DISCORD_TOKEN; echo
+read -r -p "Main admin Discord ID(s), comma-separated: " MAIN_ADMIN_ID
+read -r -p "This host's public IPv4: " PUBLIC_IP
+read -r -p "LXD storage pool [default]: " DEFAULT_STORAGE_POOL
+if [[ -z "$DEFAULT_STORAGE_POOL" ]]; then DEFAULT_STORAGE_POOL="default"; fi
+[[ -n "$DISCORD_TOKEN" && -n "$MAIN_ADMIN_ID" && -n "$PUBLIC_IP" ]] || { echo "All three values are required."; exit 1; }
+[[ "$MAIN_ADMIN_ID" =~ ^[0-9]+(,[0-9]+)*$ ]] || { echo "Admin IDs must be numeric."; exit 1; }
+[[ "$PUBLIC_IP" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || { echo "Enter a valid IPv4 address."; exit 1; }
+install -d -m 0750 "$ENV_DIR"
 umask 077
-cat > /etc/evil-vps-bot/bot.env <<EOF
+cat > "$ENV_DIR/bot.env" <<EOF
 DISCORD_TOKEN=$DISCORD_TOKEN
 MAIN_ADMIN_ID=$MAIN_ADMIN_ID
-BOT_NAME=Svm-v9
+BOT_NAME=SHADOW VPS
 PREFIX=.
+PUBLIC_IP=$PUBLIC_IP
+DEFAULT_OS_IMAGE=ubuntu:22.04
+DEFAULT_STORAGE_POOL=$DEFAULT_STORAGE_POOL
+DATABASE_PATH=$APP/vps-v2.db
+RESERVE_RAM_GB=3
+RESERVE_DISK_GB=15
+RESERVE_CPU=2
 PYTHONUNBUFFERED=1
 EOF
-chmod 0600 /etc/evil-vps-bot/bot.env
+chmod 0600 "$ENV_DIR/bot.env"
 unset DISCORD_TOKEN
-
 cat > /etc/systemd/system/bot.service <<'EOF'
 [Unit]
-Description=Evil VPS Discord Bot
-Wants=network-online.target
+Description=SHADOW VPS Deploy Bot V2
+Wants=network-online.target snapd.service
 After=network-online.target snapd.service
-
 [Service]
 Type=simple
 User=root
@@ -98,21 +57,16 @@ WorkingDirectory=/opt/evil-vps-bot
 EnvironmentFile=/etc/evil-vps-bot/bot.env
 ExecStart=/opt/evil-vps-bot/venv/bin/python /opt/evil-vps-bot/bot.py
 Restart=on-failure
-RestartSec=5
-TimeoutStopSec=20
-
+RestartSec=8
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
 [Install]
 WantedBy=multi-user.target
 EOF
-
 systemctl daemon-reload
 systemctl enable --now bot.service
-sleep 2
-echo
 systemctl --no-pager --full status bot.service || true
-echo
-echo "Install complete."
-echo "Logs:   journalctl -u bot -n 100 --no-pager"
-echo "Follow: journalctl -u bot -f"
-echo "Restart: systemctl restart bot"
-echo "LXC list: lxc list"
+echo "Logs: journalctl -u bot -f"
+echo "Give the bot Manage Server permission and enable Server Members + Message Content intents."
+echo "Allow TCP 22000-49999 in your provider firewall for SSH access."
